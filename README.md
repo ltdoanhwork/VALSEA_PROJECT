@@ -37,10 +37,15 @@
 ```bash
 cd backend
 source .venv/bin/activate
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
+pip install -r requirements.txt   # once
+uvicorn main:app --reload --host 127.0.0.1 --port 8001
 ```
 
-**Browser:** Open **http://127.0.0.1:8000** — not `http://0.0.0.0:8000` (bind-only; browsers often hang). The home page is plain HTML with links. **`/docs` (Swagger)** loads JavaScript from a CDN; if that tab never finishes, try **`GET /health`** or **`GET /openapi.json`** instead, or allowlist `cdn.jsdelivr.net` / disable aggressive blockers.
+Default port **8001** avoids conflicts with other apps (e.g. IDE tools on **8000**). If you see **`[Errno 48] Address already in use`**, pick another free port: `--port 8002` and set `API_BASE` in [`frontend/app.js`](frontend/app.js) to match.
+
+Use **`127.0.0.1`** here if opening the API only on your machine avoids confusing firewall/VPN behavior; use **`0.0.0.0`** when another device on the LAN must connect (then browse using your machine’s LAN IP, not `0.0.0.0`).
+
+**Browser:** Open **http://127.0.0.1:8001** — not `http://0.0.0.0:8001` (bind-only; browsers often hang). The home page is plain HTML with links. **`/docs` (Swagger)** loads JavaScript from a CDN; if that tab never finishes, try **`GET /health`** or **`GET /openapi.json`** instead, or allowlist `cdn.jsdelivr.net` / disable aggressive blockers.
 
 **Terminal 2 — Frontend**
 
@@ -49,7 +54,7 @@ cd frontend
 python3 -m http.server 5173
 ```
 
-Open **http://127.0.0.1:5173** — the UI posts to **http://127.0.0.1:8000/process** ([`frontend/app.js`](frontend/app.js)).
+Open **http://127.0.0.1:5173** — the UI posts to **http://127.0.0.1:8001/process** ([`frontend/app.js`](frontend/app.js)).
 
 ## API
 
@@ -62,10 +67,11 @@ Response: `transcript`, `summary_en`, `summary_local`, `quiz`, optional `quiz_er
 
 ## Troubleshooting “won’t load”
 
-1. **Confirm the server is running** — In the terminal where you started uvicorn you should see `Uvicorn running on http://0.0.0.0:8000`. No log / errors → start uvicorn again from `backend/` with venv activated.
-2. **Use `127.0.0.1`, not `0.0.0.0`** in the browser address bar.
-3. **`/docs` spinning** — Swagger pulls assets from the internet; offline networks, VPN, or ad/script blockers can block the CDN. Open **`http://127.0.0.1:8000/`** (simple page) or **`http://127.0.0.1:8000/health`** — if those work, the API is fine.
-4. **Quick CLI check:** `curl -s http://127.0.0.1:8000/health` should print `{"status":"ok"}`.
+1. **Confirm the server is running** — In the terminal where you started uvicorn you should see `Uvicorn running on http://127.0.0.1:8001`. No log / errors → start uvicorn again from `backend/` with venv activated.
+2. **`Address already in use`** — Another program owns that port (check with `lsof -nP -iTCP:8001 -sTCP:LISTEN`). Use a different `--port` and update `API_BASE` in `frontend/app.js`.
+3. **Use `127.0.0.1`, not `0.0.0.0`** in the browser address bar.
+4. **`/docs` spinning** — Swagger pulls assets from the internet; offline networks, VPN, or ad/script blockers can block the CDN. Open **`http://127.0.0.1:8001/`** (simple page) or **`http://127.0.0.1:8001/health`** — if those work, the API is fine.
+5. **Quick CLI check:** `curl -s http://127.0.0.1:8001/health` should print `{"status":"ok"}`.
 
 ## Docs
 

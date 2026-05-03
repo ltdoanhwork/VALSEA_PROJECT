@@ -11,7 +11,7 @@ import httpx
 from dotenv import load_dotenv
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, Response
 
 from services.clarify import clarify_text
 from services.format_summary import format_key_quotes
@@ -52,6 +52,11 @@ a{color:#0369a1;}
 </ul>
 <p><strong>POST</strong> <code>/process</code> — upload audio from the <a href="http://127.0.0.1:5173">frontend</a> or curl.</p>
 </body></html>"""
+
+
+@app.get("/favicon.ico")
+async def favicon() -> Response:
+    return Response(status_code=204)
 
 
 @app.get("/health")
@@ -184,4 +189,4 @@ async def process_lecture(
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("main:app", host="127.0.0.1", port=8001, reload=True)

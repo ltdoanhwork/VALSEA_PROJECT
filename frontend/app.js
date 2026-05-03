@@ -1,5 +1,5 @@
 /** Lecture2Quiz SEA — calls FastAPI `/process`. Change if backend runs elsewhere. */
-const API_BASE = "http://127.0.0.1:8000";
+const API_BASE = "http://127.0.0.1:8001";
 
 const form = document.getElementById("upload-form");
 const statusEl = document.getElementById("status");
