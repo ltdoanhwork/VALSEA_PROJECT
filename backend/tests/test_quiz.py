@@ -65,6 +65,15 @@ def test_generate_quiz_sync_normalizes_questions() -> None:
     assert len(out) == 1
     assert out[0]["question"] == "One?"
     assert out[0]["answer"] == "B"
+    assert "explain" in out[0]
+
+
+def test_generate_quiz_sync_use_mock_loads_frontend_pack(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("USE_MOCK_QUIZ", "true")
+    out = quiz_module.generate_quiz_sync("ignored transcript")
+    assert len(out) >= 1
+    assert all(isinstance(x.get("explain"), str) for x in out)
+    assert all(x.get("answer") in {"A", "B", "C", "D"} for x in out)
 
 
 def test_generate_quiz_sync_invalid_json_raises() -> None:

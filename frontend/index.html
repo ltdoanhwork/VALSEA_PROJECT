@@ -26,17 +26,30 @@
           Upload a lecture recording — get a clean transcript, bilingual summary, and quiz powered by
           <span class="text-sky-300">Valsea</span> + <span class="text-sky-300">Gemini</span>.
         </p>
+        <p class="mt-4 flex flex-wrap justify-center gap-3">
+          <a
+            href="./quiz.html"
+            class="inline-flex items-center gap-2 rounded-full border border-sky-500/40 bg-sky-500/10 px-4 py-2 text-sm font-semibold text-sky-200 transition hover:bg-sky-500/20"
+            >Interactive quiz room →</a
+          >
+          <a
+            href="./flashcards.html"
+            class="inline-flex items-center gap-2 rounded-full border border-teal-500/40 bg-teal-500/10 px-4 py-2 text-sm font-semibold text-teal-100 transition hover:bg-teal-500/20"
+            >Flashcards & SRS →</a
+          >
+        </p>
       </header>
 
       <section class="rounded-2xl border border-white/10 bg-white/5 p-6 shadow-xl backdrop-blur">
         <form id="upload-form" class="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end">
+          <input type="hidden" name="stream" value="true" />
           <div class="flex-1 min-w-[200px]">
             <label class="block text-sm font-medium text-slate-300">Lecture audio</label>
             <input
               id="audio"
               name="audio"
               type="file"
-              accept="audio/*,.mp3,.wav,.m4a,.flac,.ogg,.webm"
+              accept="audio/*,.mp3,.wav,.m4a,.flac,.ogg,.webm,video/mp4,.mp4"
               required
               class="mt-1 block w-full cursor-pointer rounded-lg border border-white/10 bg-sea-950/80 px-3 py-2 text-sm file:mr-3 file:rounded file:border-0 file:bg-sky-600 file:px-3 file:py-1 file:text-white hover:file:bg-sky-500"
             />
@@ -78,9 +91,28 @@
           </button>
         </form>
         <p id="status" class="mt-4 hidden text-sm text-amber-200"></p>
+        <div id="progress-panel" class="mt-4 hidden rounded-xl border border-sky-500/30 bg-sea-950/60 p-4">
+          <p class="text-xs font-semibold uppercase tracking-wide text-sky-300/90">Backend pipeline</p>
+          <ol id="progress-steps" class="mt-3 list-decimal space-y-2 pl-5 text-sm text-slate-300"></ol>
+        </div>
       </section>
 
       <section id="results" class="mt-10 hidden">
+        <div class="mb-4 flex flex-wrap items-center justify-center gap-3">
+          <a
+            href="./quiz.html"
+            class="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-sky-600 px-5 py-3 text-sm font-bold text-white shadow-lg transition hover:brightness-110"
+          >
+            Open full-screen interactive quiz →
+          </a>
+          <a
+            href="./flashcards.html"
+            class="inline-flex items-center gap-2 rounded-xl border border-teal-500/50 bg-teal-500/15 px-5 py-3 text-sm font-bold text-teal-100 shadow-lg transition hover:bg-teal-500/25"
+          >
+            Spaced repetition deck →
+          </a>
+          <span class="text-xs text-slate-500">Quiz & flashcards use your latest run (browser session)</span>
+        </div>
         <div class="flex gap-2 border-b border-white/10 pb-2">
           <button type="button" data-tab="transcript" class="tab-btn rounded-t-lg px-4 py-2 text-sm font-medium bg-white/10 text-white">
             Transcript
@@ -90,6 +122,9 @@
           </button>
           <button type="button" data-tab="quiz" class="tab-btn rounded-t-lg px-4 py-2 text-sm font-medium text-slate-400 hover:bg-white/5">
             Quiz
+          </button>
+          <button type="button" data-tab="flashcards" class="tab-btn rounded-t-lg px-4 py-2 text-sm font-medium text-slate-400 hover:bg-white/5">
+            Flashcards
           </button>
         </div>
 
@@ -111,6 +146,17 @@
         <div id="panel-quiz" class="tab-panel mt-4 hidden space-y-4">
           <p id="quiz-error" class="hidden rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-100"></p>
           <div id="quiz-list" class="space-y-4"></div>
+        </div>
+
+        <div id="panel-flashcards" class="tab-panel mt-4 hidden space-y-4 rounded-xl border border-white/10 bg-white/5 p-6">
+          <p id="flashcards-error" class="hidden rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-100"></p>
+          <p class="text-xs text-slate-500">
+            Cards are leveled <span class="text-emerald-300/90">Easy</span> (definitions) ·
+            <span class="text-amber-200/90">Medium</span> (examples / compare) ·
+            <span class="text-orange-300/90">Hard</span> (why / apply / misconceptions).
+            Open <a href="./flashcards.html" class="text-teal-300 underline-offset-2 hover:underline">full deck</a> for flip & spaced repetition (Again · Hard · Good · Easy).
+          </p>
+          <div id="flashcards-list" class="space-y-6"></div>
         </div>
       </section>
 

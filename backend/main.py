@@ -3,21 +3,15 @@
 from __future__ import annotations
 
 import asyncio
-import os
+import json
 from pathlib import Path
-from typing import Any
 
-import httpx
 from dotenv import load_dotenv
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, Response
+from fastapi.responses import HTMLResponse, Response, StreamingResponse
 
-from services.clarify import clarify_text
-from services.format_summary import format_key_quotes
-from services.quiz import generate_quiz
-from services.transcribe import transcribe_audio
-from services.translate import translate_text
+from services.pipeline import LecturePipelineError, run_lecture_pipeline
 
 ROOT = Path(__file__).resolve().parent.parent
 load_dotenv(ROOT / ".env")
@@ -50,7 +44,7 @@ a{color:#0369a1;}
 <li><a href="/openapi.json"><code>GET /openapi.json</code></a> — machine-readable schema</li>
 <li><a href="/docs"><code>GET /docs</code></a> — Swagger UI <strong>(needs internet</strong> for JS/CSS from CDN; if this tab spins forever, blockers or offline network)</li>
 </ul>
-<p><strong>POST</strong> <code>/process</code> — upload audio from the <a href="http://127.0.0.1:5173">frontend</a> or curl.</p>
+<p><strong>POST</strong> <code>/process</code> — upload audio (<code>stream=true</code> for SSE progress).</p>
 </body></html>"""
 
 
@@ -64,14 +58,8 @@ async def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
-def _normalize_semantic_tags(raw: Any) -> list[dict[str, Any]] | None:
-    if not isinstance(raw, list) or not raw:
-        return None
-    out: list[dict[str, Any]] = []
-    for item in raw:
-        if isinstance(item, dict):
-            out.append(item)
-    return out or None
+def _truthy_stream(raw: str) -> bool:
+    return raw.strip().lower() in {"1", "true", "yes", "on"}
 
 
 @app.post("/process")
@@ -79,111 +67,83 @@ async def process_lecture(
     audio: UploadFile = File(...),
     target_language: str = Form("vietnamese"),
     transcription_language: str = Form("english"),
-) -> dict[str, Any]:
-    if not os.environ.get("VALSEA_API_KEY", "").strip():
-        raise HTTPException(status_code=500, detail="VALSEA_API_KEY is not configured")
-
+    stream: str = Form("false"),
+):
     content = await audio.read()
-    if not content:
-        raise HTTPException(status_code=400, detail="Empty audio file")
-
     filename = audio.filename or "lecture.wav"
     content_type = audio.content_type
 
-    async with httpx.AsyncClient() as client:
-        try:
-            tr = await transcribe_audio(
-                client,
-                file_content=content,
-                filename=filename,
-                content_type=content_type,
-                language=transcription_language.strip().lower(),
-            )
-        except httpx.HTTPStatusError as exc:
-            detail = exc.response.text or exc.response.reason_phrase
-            raise HTTPException(
-                status_code=exc.response.status_code,
-                detail=f"Valsea transcription failed: {detail}",
-            ) from exc
-        except httpx.RequestError as exc:
-            raise HTTPException(status_code=502, detail=f"Transcription request failed: {exc}") from exc
+    if _truthy_stream(stream):
 
-    raw_for_clarify = (
-        (tr.get("raw_transcript") or "").strip()
-        or (tr.get("text") or "").strip()
-    )
-    if not raw_for_clarify:
-        raise HTTPException(status_code=422, detail="Transcription returned empty text")
+        async def event_gen():
+            queue: asyncio.Queue[str | None] = asyncio.Queue()
 
-    semantic_tags = _normalize_semantic_tags(tr.get("semantic_tags"))
+            async def emit_phase(phase: str, label: str) -> None:
+                payload = json.dumps(
+                    {"type": "phase", "phase": phase, "label": label},
+                    ensure_ascii=False,
+                )
+                await queue.put(payload)
+
+            async def runner() -> None:
+                try:
+                    result = await run_lecture_pipeline(
+                        file_content=content,
+                        filename=filename,
+                        content_type=content_type,
+                        target_language=target_language,
+                        transcription_language=transcription_language,
+                        progress=emit_phase,
+                    )
+                    await queue.put(
+                        json.dumps({"type": "complete", "payload": result}, ensure_ascii=False)
+                    )
+                except LecturePipelineError as exc:
+                    await queue.put(
+                        json.dumps(
+                            {"type": "error", "status": exc.status_code, "detail": exc.detail},
+                            ensure_ascii=False,
+                        )
+                    )
+                except Exception as exc:  # noqa: BLE001
+                    await queue.put(
+                        json.dumps(
+                            {"type": "error", "status": 500, "detail": str(exc)},
+                            ensure_ascii=False,
+                        )
+                    )
+                finally:
+                    await queue.put(None)
+
+            task = asyncio.create_task(runner())
+            while True:
+                item = await queue.get()
+                if item is None:
+                    break
+                yield f"data: {item}\n\n".encode("utf-8")
+            await task
+
+        return StreamingResponse(
+            event_gen(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no",
+            },
+        )
 
     try:
-        async with httpx.AsyncClient() as client:
-            clean_text = await clarify_text(client, text=raw_for_clarify)
-    except httpx.HTTPStatusError as exc:
-        detail = exc.response.text or exc.response.reason_phrase
-        raise HTTPException(
-            status_code=exc.response.status_code,
-            detail=f"Valsea clarification failed: {detail}",
-        ) from exc
-
-    if not clean_text:
-        clean_text = raw_for_clarify
-
-    quiz_error: str | None = None
-
-    async def safe_quiz() -> list[dict[str, Any]]:
-        nonlocal quiz_error
-        try:
-            return await generate_quiz(clean_text)
-        except Exception as exc:  # noqa: BLE001 — pitch demo resilience
-            quiz_error = str(exc)
-            return []
-
-    async with httpx.AsyncClient() as client:
-        try:
-            summary_en, quiz_items = await asyncio.gather(
-                format_key_quotes(
-                    client,
-                    transcript=clean_text,
-                    semantic_tags=semantic_tags,
-                ),
-                safe_quiz(),
-            )
-        except httpx.HTTPStatusError as exc:
-            detail = exc.response.text or exc.response.reason_phrase
-            raise HTTPException(
-                status_code=exc.response.status_code,
-                detail=f"Valsea formatting failed: {detail}",
-            ) from exc
-
-        summary_local = ""
-        try:
-            if summary_en.strip():
-                summary_local = await translate_text(
-                    client,
-                    text=summary_en,
-                    target_language=target_language.strip().lower(),
-                )
-        except httpx.HTTPStatusError as exc:
-            detail = exc.response.text or exc.response.reason_phrase
-            raise HTTPException(
-                status_code=exc.response.status_code,
-                detail=f"Valsea translation failed: {detail}",
-            ) from exc
-
-    return {
-        "transcript": clean_text,
-        "summary_en": summary_en,
-        "summary_local": summary_local,
-        "quiz": quiz_items,
-        "quiz_error": quiz_error,
-        "meta": {
-            "filename": filename,
-            "target_language": target_language,
-            "transcription_language": transcription_language,
-        },
-    }
+        return await run_lecture_pipeline(
+            file_content=content,
+            filename=filename,
+            content_type=content_type,
+            target_language=target_language,
+            transcription_language=transcription_language,
+            progress=None,
+        )
+    except LecturePipelineError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
 
 
 if __name__ == "__main__":

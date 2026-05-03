@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Flashcards & spaced repetition — Lecture2Quiz SEA</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              sea: { 950: "#0c1222", 900: "#111827", 700: "#1e3a5f", 500: "#0ea5e9" },
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      .flip-scene {
+        perspective: 1200px;
+      }
+      .flip-inner {
+        position: relative;
+        width: 100%;
+        min-height: 220px;
+        transition: transform 0.55s cubic-bezier(0.4, 0.2, 0.2, 1);
+        transform-style: preserve-3d;
+      }
+      .flip-inner.is-flipped {
+        transform: rotateY(180deg);
+      }
+      .flip-face {
+        backface-visibility: hidden;
+        -webkit-backface-visibility: hidden;
+      }
+      .flip-back {
+        transform: rotateY(180deg);
+      }
+    </style>
+  </head>
+  <body class="min-h-screen bg-gradient-to-br from-sea-950 via-sea-900 to-indigo-950 text-slate-100">
+    <div class="mx-auto max-w-3xl px-4 py-8">
+      <header class="mb-8 flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-widest text-teal-300/90">Spaced repetition</p>
+          <h1 class="mt-1 text-2xl font-bold text-white sm:text-3xl">Flashcard deck</h1>
+          <p class="mt-2 max-w-xl text-sm leading-relaxed text-slate-400">
+            Every wrong answer becomes a personalized flashcard.
+            <span class="text-slate-500">Pair this page with the quiz room — ratings schedule the next review.</span>
+          </p>
+        </div>
+        <nav class="flex flex-wrap gap-2 text-sm">
+          <a href="./index.html" class="rounded-lg bg-white/10 px-3 py-2 text-slate-200 hover:bg-white/15">Study pack</a>
+          <a href="./quiz.html" class="rounded-lg bg-white/10 px-3 py-2 text-slate-200 hover:bg-white/15">Quiz room</a>
+        </nav>
+      </header>
+
+      <p id="ingest-banner" class="mb-4 hidden rounded-xl border border-teal-500/40 bg-teal-500/10 px-4 py-3 text-sm text-teal-100"></p>
+
+      <div class="mb-6 flex flex-wrap items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm">
+        <span id="stat-due" class="font-semibold text-amber-200"></span>
+        <span class="text-slate-600">·</span>
+        <span id="stat-total" class="text-slate-300"></span>
+        <span class="text-slate-600">·</span>
+        <span id="stat-mistakes" class="text-rose-300/90"></span>
+      </div>
+
+      <div class="mb-4 flex flex-wrap gap-2">
+        <button type="button" data-mode="due" class="mode-btn rounded-full bg-teal-600 px-4 py-2 text-xs font-semibold text-white">
+          Study due
+        </button>
+        <button type="button" data-mode="browse" class="mode-btn rounded-full bg-white/10 px-4 py-2 text-xs font-semibold text-slate-300 hover:bg-white/15">
+          Browse all
+        </button>
+      </div>
+
+      <p class="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Filter</p>
+      <div class="mb-6 flex flex-wrap gap-2">
+        <button type="button" data-filter="all" class="filter-btn rounded-lg bg-white/15 px-3 py-1.5 text-xs font-medium text-white">
+          All levels
+        </button>
+        <button type="button" data-filter="easy" class="filter-btn rounded-lg bg-white/5 px-3 py-1.5 text-xs font-medium text-emerald-300/90 hover:bg-white/10">
+          Easy
+        </button>
+        <button type="button" data-filter="medium" class="filter-btn rounded-lg bg-white/5 px-3 py-1.5 text-xs font-medium text-amber-200/90 hover:bg-white/10">
+          Medium
+        </button>
+        <button type="button" data-filter="hard" class="filter-btn rounded-lg bg-white/5 px-3 py-1.5 text-xs font-medium text-orange-300/90 hover:bg-white/10">
+          Hard
+        </button>
+        <button type="button" data-filter="mistake" class="filter-btn rounded-lg bg-white/5 px-3 py-1.5 text-xs font-medium text-rose-300/90 hover:bg-white/10">
+          From mistakes
+        </button>
+      </div>
+
+      <section class="rounded-2xl border border-white/10 bg-white/[0.06] p-6 shadow-xl backdrop-blur">
+        <div id="empty-state" class="hidden py-12 text-center text-slate-400">
+          <p class="text-lg font-medium text-slate-300">No cards in your deck yet.</p>
+          <p class="mt-2 text-sm">Generate a study pack (flashcards run with the pipeline) or finish a quiz with misses.</p>
+          <div class="mt-6 flex justify-center gap-3">
+            <a href="./index.html" class="rounded-xl bg-sky-600 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-500">Upload lecture</a>
+            <a href="./quiz.html" class="rounded-xl border border-white/20 px-4 py-2 text-sm font-semibold text-slate-200 hover:bg-white/5">Take quiz</a>
+          </div>
+        </div>
+
+        <div id="study-panel" class="hidden">
+          <div class="mb-2 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+            <span id="card-meta"></span>
+            <span id="card-due-hint"></span>
+          </div>
+
+          <div class="flip-scene mx-auto max-w-xl cursor-pointer" id="flip-trigger" title="Click to flip">
+            <div
+              class="flip-inner relative min-h-[240px] rounded-2xl border border-white/15 bg-gradient-to-br from-sea-950/90 to-indigo-950/80 shadow-inner"
+              id="flip-inner"
+            >
+              <div class="flip-face absolute inset-0 flex flex-col rounded-2xl p-6">
+                <p class="text-[10px] font-bold uppercase tracking-widest text-sky-400/90">Front</p>
+                <p id="card-front" class="mt-4 flex-1 whitespace-pre-wrap text-base leading-relaxed text-slate-100"></p>
+                <p class="mt-4 text-center text-xs text-slate-500">Tap card or press Space to flip</p>
+              </div>
+              <div class="flip-face flip-back absolute inset-0 flex flex-col rounded-2xl p-6">
+                <p class="text-[10px] font-bold uppercase tracking-widest text-teal-400/90">Back</p>
+                <p id="card-back" class="mt-4 flex-1 whitespace-pre-wrap text-base leading-relaxed text-slate-100"></p>
+              </div>
+            </div>
+          </div>
+
+          <p class="mt-6 text-center text-xs font-semibold uppercase tracking-wide text-slate-500">How well did you recall it?</p>
+          <div class="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <button type="button" data-rate="again" class="rate-btn rounded-xl border border-rose-500/40 bg-rose-500/10 px-3 py-3 text-left transition hover:bg-rose-500/20">
+              <span class="block text-sm font-bold text-rose-200">Again</span>
+              <span class="mt-0.5 block text-[10px] text-rose-300/70">10 minutes</span>
+            </button>
+            <button type="button" data-rate="hard" class="rate-btn rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-3 text-left transition hover:bg-amber-500/20">
+              <span class="block text-sm font-bold text-amber-100">Hard</span>
+              <span class="mt-0.5 block text-[10px] text-amber-200/70">Tomorrow</span>
+            </button>
+            <button type="button" data-rate="good" class="rate-btn rounded-xl border border-sky-500/40 bg-sky-500/10 px-3 py-3 text-left transition hover:bg-sky-500/20">
+              <span class="block text-sm font-bold text-sky-100">Good</span>
+              <span class="mt-0.5 block text-[10px] text-sky-200/70">3 days</span>
+            </button>
+            <button type="button" data-rate="easy" class="rate-btn rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-3 py-3 text-left transition hover:bg-emerald-500/20">
+              <span class="block text-sm font-bold text-emerald-100">Easy</span>
+              <span class="mt-0.5 block text-[10px] text-emerald-200/70">7 days</span>
+            </button>
+          </div>
+
+          <p id="done-msg" class="mt-8 hidden text-center text-emerald-300/90"></p>
+        </div>
+      </section>
+
+      <footer class="mt-10 text-center text-xs text-slate-600">
+        Rule-based demo SRS — intervals: Again 10m · Hard 24h · Good 3d · Easy 7d.
+      </footer>
+    </div>
+
+    <script src="./study-deck.js"></script>
+    <script src="./flashcards-app.js"></script>
+  </body>
+</html>

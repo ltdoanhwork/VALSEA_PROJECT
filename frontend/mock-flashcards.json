@@ -1,0 +1,41 @@
+{
+  "title": "Demo flashcards (math class)",
+  "cards": [
+    {
+      "front": "What is a fraction?",
+      "back": "A number that represents part of a whole: numerator / denominator.",
+      "difficulty": "easy",
+      "card_type": "definition"
+    },
+    {
+      "front": "What does the denominator tell you?",
+      "back": "How many equal parts the whole is divided into.",
+      "difficulty": "easy",
+      "card_type": "terminology"
+    },
+    {
+      "front": "Give an example of comparing 1/2 and 1/3 using real-world slices.",
+      "back": "A pizza cut into 2 pieces gives larger slices than the same pizza cut into 3 pieces — each half is bigger than each third.",
+      "difficulty": "medium",
+      "card_type": "example"
+    },
+    {
+      "front": "Compare 1/2 and 1/3 without calculating decimals.",
+      "back": "Same numerator; the smaller denominator means fewer, therefore larger, parts — so 1/2 > 1/3.",
+      "difficulty": "medium",
+      "card_type": "comparison"
+    },
+    {
+      "front": "Why is 1/2 greater than 1/3?",
+      "back": "Halves split the whole into fewer parts than thirds, so each half occupies more of the whole than each third.",
+      "difficulty": "hard",
+      "card_type": "reasoning"
+    },
+    {
+      "front": "Common mistake: treating bigger denominators as bigger fractions. Why is that wrong?",
+      "back": "A larger denominator means more slices of the same whole, so each slice is smaller — the fraction's value goes down when the denominator grows (with the same numerator).",
+      "difficulty": "hard",
+      "card_type": "misconception"
+    }
+  ]
+}

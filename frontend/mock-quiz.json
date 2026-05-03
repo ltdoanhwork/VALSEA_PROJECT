@@ -1,0 +1,72 @@
+{
+  "title": "Demo quiz — Math & English (SEA classroom)",
+  "subtitle": "Mock pack for pitching Lecture2Quiz SEA · tap an answer or press 1–4",
+  "questions": [
+    {
+      "question": "In North American English, what do people usually say for mathematics class?",
+      "options": {
+        "A": "maths class",
+        "B": "math class",
+        "C": "mathematics only, never shortened",
+        "D": "arithmetics class"
+      },
+      "answer": "B",
+      "explain": "Speakers in North America typically say “math”; British English often uses “maths”."
+    },
+    {
+      "question": "What is the answer called when you **add** two numbers?",
+      "options": {
+        "A": "The difference",
+        "B": "The product",
+        "C": "The sum",
+        "D": "The quotient"
+      },
+      "answer": "C",
+      "explain": "Addition produces the **sum** (e.g. 3 + 4 = 7)."
+    },
+    {
+      "question": "Which symbol is used for **multiplication** in “two times three equals six”?",
+      "options": {
+        "A": "÷",
+        "B": "−",
+        "C": "+",
+        "D": "× (times)"
+      },
+      "answer": "D",
+      "explain": "**Times** / × signals multiplication; ÷ is division."
+    },
+    {
+      "question": "9 − 3 = 6. The number **6** is called the ___. ",
+      "options": {
+        "A": "sum",
+        "B": "difference",
+        "C": "quotient",
+        "D": "numerator"
+      },
+      "answer": "B",
+      "explain": "Subtraction yields the **difference**."
+    },
+    {
+      "question": "Why might a lecture mixing English + a local language need transcription tuned for Southeast Asia?",
+      "options": {
+        "A": "SEA accents and code-switching need robust STT",
+        "B": "Because MP4 files are always too small",
+        "C": "Because quizzes never need bilingual summaries",
+        "D": "Because HTTPS always fails in SEA"
+      },
+      "answer": "A",
+      "explain": "Real classrooms code-switch; platforms like Valsea focus on SEA speech patterns."
+    },
+    {
+      "question": "Quick streak check: you’ve been on fire — what keeps good quiz UX?",
+      "options": {
+        "A": "Instant feedback + progress you can feel",
+        "B": "No feedback until the end only",
+        "C": "Tiny tap targets only",
+        "D": "Hide the correct answer forever"
+      },
+      "answer": "A",
+      "explain": "Immediate feedback and visible progress boost motivation (you’re proving it right now)."
+    }
+  ]
+}

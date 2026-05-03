@@ -32,7 +32,13 @@ async def transcribe_audio(
         headers=headers,
         files=files,
         data=data,
-        timeout=httpx.Timeout(600.0, connect=60.0),
+        timeout=httpx.Timeout(
+            900.0,
+            connect=120.0,
+            read=900.0,
+            write=900.0,
+            pool=120.0,
+        ),
     )
     response.raise_for_status()
     return response.json()
