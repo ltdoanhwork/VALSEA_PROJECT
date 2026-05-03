@@ -1,0 +1,171 @@
+# Valsea
+
+> Valsea is an AI-powered speech intelligence API platform built for Southeast Asia. It provides enterprise-grade speech-to-text transcription, translation, annotation, clarification, conversion, formatting, and sentiment analysis through simple REST endpoints. The transcription endpoint is OpenAI SDK compatible. It also offers real-time live transcription via WebSocket.
+
+- Base URL: https://api.valsea.ai
+- Authentication: Bearer token via `Authorization: Bearer YOUR_API_KEY` header
+- Alternative auth: `X-API-Key: YOUR_API_KEY` header
+- API keys start with `vl_` prefix
+- Get API keys from the dashboard at https://valsea.ai/en/dashboard/api-keys
+- All endpoints consume credits from your account balance
+- All POST endpoints support two response formats: `json` (default, minimal) and `verbose_json` (extended with metadata)
+
+## Docs
+
+- [Introduction](https://valsea.ai/docs): Overview of the platform — transcription, translation, annotation, clarification, conversion, formatting, sentiment analysis, and live transcription
+- [Quickstart](https://valsea.ai/docs/quickstart): Get started in under 5 minutes with code examples in cURL, JavaScript, Python, and OpenAI SDK
+- [Authentication](https://valsea.ai/docs/authentication): How to get and use API keys, credit system overview
+- [Live Transcription via WebSocket](https://valsea.ai/docs/realtime): Real-time streaming speech-to-text via WebSocket at `wss://api.valsea.ai/v1/realtime`
+
+## API Reference
+
+- [API Overview](https://valsea.ai/docs/api): Summary of all 7 REST endpoints with base URL and authentication details
+
+### POST /v1/audio/transcriptions — Transcribe Audio
+
+- [Full documentation](https://valsea.ai/docs/api/transcribe)
+- OpenAI SDK compatible — use `baseURL: 'https://api.valsea.ai/v1'` with the official OpenAI TypeScript or Python client
+- Content-Type: multipart/form-data
+- Parameters:
+  - `file` (binary, required): Audio file — WAV, MP3, M4A, FLAC, OGG, WEBM. Max 10 MB, max 1 hour
+  - `model` (string, required): Always `valsea-transcribe`
+  - `language` (string, required): One of arabic, arabic-algeria, arabic-bahrain, arabic-egypt, arabic-israel, arabic-jordan, arabic-kuwait, arabic-lebanon, arabic-mauritania, arabic-morocco, arabic-oman, arabic-palestine, arabic-qatar, arabic-saudi, arabic-syria, arabic-tunisia, arabic-uae, arabic-yemen, bengali-bd, bengali-in, cantonese, chinese, chinese-simplified, chinese-traditional, english, english-au, english-gb, english-in, english-philippines, english-us, french, french-ca, portuguese, portuguese-br, spanish, spanish-es, spanish-mexico, spanish-us, swahili, swahili-ke, afrikaans, albanian, amharic, armenian, assamese, asturian, azerbaijani, basque, bulgarian, catalan, croatian, czech, danish, dutch, estonian, filipino, finnish, galician, georgian, german, greek, gujarati, hausa, hebrew, hindi, hungarian, icelandic, indonesian, italian, japanese, javanese, kannada, kazakh, khmer, korean, kurdish, kyrgyz, lao, latvian, lithuanian, luxembourgish, macedonian, malay, malayalam, maltese, maori, marathi, mongolian, nepali, northern-sotho, norwegian, oriya, persian, polish, punjabi, romanian, russian, serbian, singlish, slovak, slovenian, swedish, tamil, telugu, thai, turkish, ukrainian, uzbek, vietnamese, welsh, wolof, xhosa, yoruba, zulu
+  - `response_format` (string, optional): `json` or `verbose_json`. Default: `json`
+  - `enable_correction` (boolean, optional): Enable grammar/language correction. Default: true
+  - `enable_tags` (boolean, optional): Enable semantic tagging. Default: true
+- Response (json): `{ "text": "..." }`
+- Response (verbose_json): `{ "text", "raw_transcript", "detected_languages", "corrections", "semantic_tags", "annotated_text", "clarified_text" }`
+- OpenAI TypeScript SDK example: `client.audio.transcriptions.create({ file, model: 'valsea-transcribe', language: 'english' })`
+- OpenAI Python SDK example: `client.audio.transcriptions.create(file=open("audio.wav","rb"), model="valsea-transcribe", language="english", extra_body={"enable_correction": True})`
+
+### POST /v1/translations — Translate Text
+
+- [Full documentation](https://valsea.ai/docs/api/translate)
+- Content-Type: application/json
+- Parameters:
+  - `model` (string, required): Always `valsea-translate`
+  - `text` (string, required): Text to translate
+  - `source` (string, optional): Source language name (e.g. "english", "chinese") or "auto" for detection. Default: "auto"
+  - `target` (string, required): Target language name (e.g. "chinese", "vietnamese", "thai")
+  - `response_format` (string, optional): `json` or `verbose_json`. Default: `json`
+- Response (json): `{ "translated_text": "..." }`
+- Response (verbose_json): `{ "translated_text", "source_language", "target_language" }`
+
+### POST /v1/annotations — Annotate Text
+
+- [Full documentation](https://valsea.ai/docs/api/annotate)
+- Content-Type: application/json
+- Annotate text with language corrections and semantic tags. Useful for processing colloquial transcriptions.
+- Parameters:
+  - `model` (string, required): Always `valsea-annotate`
+  - `text` (string, required): Text to annotate
+  - `response_format` (string, optional): `json` or `verbose_json`. Default: `json`
+  - `language` (string, optional): Language hint (e.g. "singlish")
+  - `enable_correction` (boolean, optional): Enable grammar/language correction
+  - `enable_tags` (boolean, optional): Enable semantic tagging
+- Response (json): `{ "text", "annotations" }`
+- Response (verbose_json): `{ "text", "raw_text", "accent_corrections", "semantic_tags", "annotated_text", "annotations" }`
+
+### POST /v1/clarifications — Clarify Text
+
+- [Full documentation](https://valsea.ai/docs/api/clarify)
+- Content-Type: application/json
+- Transform noisy or colloquial transcriptions into clear, grammatically correct text.
+- Parameters:
+  - `model` (string, required): Always `valsea-clarify`
+  - `text` (string, required): Text to clarify
+  - `response_format` (string, optional): `json` or `verbose_json`. Default: `json`
+  - `language` (string, optional): Language hint (e.g. "singlish")
+- Response (json): `{ "clarified_text": "..." }`
+- Response (verbose_json): `{ "clarified_text", "raw_text", "explanations", "revisions" }`
+
+### POST /v1/conversions — Convert Annotated Text
+
+- [Full documentation](https://valsea.ai/docs/api/convert)
+- Content-Type: application/json
+- Convert annotated text (with semantic tags) into clean, readable text.
+- Parameters:
+  - `model` (string, required): Always `valsea-convert`
+  - `annotated_text` (string, required): Annotated text to convert
+  - `response_format` (string, optional): `json` or `verbose_json`. Default: `json`
+  - `semantic_tags` (array, optional): Array of `{ tag, phrase, meaning }` objects
+- Response (json): `{ "converted_text": "..." }`
+- Response (verbose_json): `{ "converted_text", "annotated_text" }`
+
+### POST /v1/formatting — Format Transcript
+
+- [Full documentation](https://valsea.ai/docs/api/format)
+- Content-Type: application/json
+- Transform a raw transcript into structured documents like meeting minutes, sales summaries, action items, subtitles, and more.
+- Parameters:
+  - `model` (string, required): Always `valsea-format`
+  - `transcript` (string, required): The transcript to format
+  - `output_type` (string, required): One of meeting_minutes, sales_summary, service_log, subtitles, email_summary, action_items, key_quotes, interview_notes
+  - `response_format` (string, optional): `json` or `verbose_json`. Default: `json`
+  - `semantic_tags` (array, optional): Array of `{ tag, phrase, meaning }` objects
+  - `stream` (boolean, optional): Enable streaming response
+
+### POST /v1/sentiment — Analyze Sentiment
+
+- [Full documentation](https://valsea.ai/docs/api/sentiment)
+- Content-Type: application/json
+- Analyze the overall sentiment and emotional tone of a transcript.
+- Parameters:
+  - `model` (string, required): Always `valsea-sentiment`
+  - `transcript` (string, required): The transcript to analyze
+  - `response_format` (string, optional): `json` or `verbose_json`. Default: `json`
+  - `semantic_tags` (array, optional): Array of `{ tag, phrase, meaning }` objects
+- Response (json): `{ "sentiment": "positive"|"neutral"|"negative", "confidence": 0.0-1.0 }`
+- Response (verbose_json): `{ "sentiment", "confidence", "reasoning" }`
+
+## Live Transcription (WebSocket)
+
+- [Full documentation](https://valsea.ai/docs/realtime)
+- Endpoint: `wss://api.valsea.ai/v1/realtime`
+- Auth: Pass `Authorization: Bearer YOUR_API_KEY` or `X-API-Key: YOUR_API_KEY` as WebSocket headers
+- Audio format: Raw PCM 16-bit, 16kHz, mono, sent as base64
+
+### Client messages:
+- `session.start`: Initialize session with `{ type: "session.start", model: "valsea-rtt", language: "english", enable_correction: true, hint_text: "" }`
+- `audio.append`: Send audio chunk `{ type: "audio.append", audio: "BASE64_PCM16_DATA" }`
+- `audio.commit`: Signal end of speech segment `{ type: "audio.commit" }`
+- `session.stop`: End session gracefully `{ type: "session.stop" }`
+
+### Server messages:
+- `session.created`: Connection established with sessionId and supported_models
+- `session.ready`: Engine ready for audio
+- `transcript.partial`: Intermediate mutable result `{ text, isFinal: false, timestampMs }`
+- `transcript.final`: Stable committed segment `{ text, raw_text, isFinal: true, timestampMs, corrections }`
+- `error`: Error event `{ code, message }`
+
+### Transcript semantics:
+- Keep partial text in temporary UI state only (it may change).
+- Persist only final segments to transcript history/storage.
+- Clear the current partial once a final event is received.
+
+## Available Models
+
+- `valsea-transcribe`: Audio-to-text transcription with accent-aware models
+- `valsea-translate`: Text translation between 50+ languages
+- `valsea-annotate`: Text annotation with semantic tags and corrections
+- `valsea-clarify`: Transform colloquial/noisy text into clear standard text
+- `valsea-convert`: Convert annotated text into clean readable output
+- `valsea-format`: Format transcripts into meeting minutes, summaries, etc.
+- `valsea-sentiment`: Sentiment and emotional tone detection
+- `valsea-rtt`: Real-time transcription via WebSocket
+
+## Supported Languages (Transcription)
+
+arabic, arabic-algeria, arabic-bahrain, arabic-egypt, arabic-israel, arabic-jordan, arabic-kuwait, arabic-lebanon, arabic-mauritania, arabic-morocco, arabic-oman, arabic-palestine, arabic-qatar, arabic-saudi, arabic-syria, arabic-tunisia, arabic-uae, arabic-yemen, bengali-bd, bengali-in, cantonese, chinese, chinese-simplified, chinese-traditional, english, english-au, english-gb, english-in, english-philippines, english-us, french, french-ca, portuguese, portuguese-br, spanish, spanish-es, spanish-mexico, spanish-us, swahili, swahili-ke, afrikaans, albanian, amharic, armenian, assamese, asturian, azerbaijani, basque, bulgarian, catalan, croatian, czech, danish, dutch, estonian, filipino, finnish, galician, georgian, german, greek, gujarati, hausa, hebrew, hindi, hungarian, icelandic, indonesian, italian, japanese, javanese, kannada, kazakh, khmer, korean, kurdish, kyrgyz, lao, latvian, lithuanian, luxembourgish, macedonian, malay, malayalam, maltese, maori, marathi, mongolian, nepali, northern-sotho, norwegian, oriya, persian, polish, punjabi, romanian, russian, serbian, singlish, slovak, slovenian, swedish, tamil, telugu, thai, turkish, ukrainian, uzbek, vietnamese, welsh, wolof, xhosa, yoruba, zulu
+
+## Errors
+
+All endpoints return these standard error codes:
+- 401: Missing or invalid API key
+- 402: Insufficient credits
+- 413: Audio file too large or too long (transcription only — max 10 MB, max 1 hour)
+
+## Optional
+
+- [Dashboard](https://valsea.ai/en/dashboard): Manage API keys, view analytics, test endpoints in the interactive playground
+- [API Playground](https://valsea.ai/en/dashboard/playground): Interactive playground to test all endpoints with your API key
