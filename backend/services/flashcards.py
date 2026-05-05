@@ -1,4 +1,4 @@
-"""Generate leveled flashcards from transcript with Google Gemini."""
+"""Generate leveled flashcards from transcript with AWS Bedrock."""
 
 from __future__ import annotations
 
@@ -8,13 +8,13 @@ import os
 import time
 from typing import Any
 
-import google.generativeai as genai
-
 from services.flashcards_mock import load_mock_cards_raw
 from services.quiz import (
+    _bedrock_client,
+    _bedrock_generate,
+    _bedrock_model_id,
     _context_chars,
-    _gemini_model_name,
-    _is_quota_or_rate_limit,
+    _is_throttle_error,
     _retry_sleep_seconds,
     _strip_json_fence,
 )
@@ -61,13 +61,8 @@ def generate_flashcards_sync(transcript: str) -> list[dict]:
             )
         return _normalize_flashcards(raw, limit=None)
 
-    key = os.environ.get("GEMINI_API_KEY", "").strip()
-    if not key:
-        raise ValueError("GEMINI_API_KEY is not set")
-
-    genai.configure(api_key=key)
-    model_name = _gemini_model_name()
-    model = genai.GenerativeModel(model_name)
+    model_id = _bedrock_model_id()
+    client = _bedrock_client()
 
     trimmed = transcript[: _context_chars()]
     prompt = f"""You are an educator. Based ONLY on the lecture transcript below, create flashcards grouped by difficulty.
@@ -88,40 +83,41 @@ TRANSCRIPT:
 {trimmed}
 """
 
-    max_attempts = int(os.environ.get("GEMINI_FLASHCARDS_MAX_RETRIES", os.environ.get("GEMINI_QUIZ_MAX_RETRIES", "3")))
+    max_attempts = int(
+        os.environ.get("BEDROCK_FLASHCARDS_MAX_RETRIES", os.environ.get("BEDROCK_QUIZ_MAX_RETRIES", "3"))
+    )
     max_attempts = max(1, min(max_attempts, 6))
 
     last_err: BaseException | None = None
     for attempt in range(max_attempts):
         try:
-            response = model.generate_content(prompt)
-            raw_text = (response.text or "").strip()
+            raw_text = _bedrock_generate(client, model_id, prompt).strip()
             if not raw_text:
-                raise ValueError("Gemini returned empty response")
+                raise ValueError("Bedrock returned empty response")
 
             parsed = json.loads(_strip_json_fence(raw_text))
             cards = parsed.get("cards")
             if not isinstance(cards, list):
-                raise ValueError("Gemini JSON missing cards array")
+                raise ValueError("Bedrock JSON missing cards array")
 
             return _normalize_flashcards(cards, limit=24)
         except (json.JSONDecodeError, ValueError):
             raise
         except BaseException as exc:
             last_err = exc
-            if _is_quota_or_rate_limit(exc) and attempt < max_attempts - 1:
+            if _is_throttle_error(exc) and attempt < max_attempts - 1:
                 time.sleep(_retry_sleep_seconds(exc, attempt))
                 continue
-            if _is_quota_or_rate_limit(exc):
+            if _is_throttle_error(exc):
                 raise RuntimeError(
-                    f"Gemini quota/rate limit ({model_name}) while generating flashcards. "
+                    f"Bedrock throttled ({model_id}) while generating flashcards. "
                     "Try USE_MOCK_FLASHCARDS=true for demos, or retry later."
                 ) from exc
             raise
 
     if last_err is not None:
         raise last_err
-    raise RuntimeError("Gemini flashcard generation failed")
+    raise RuntimeError("Bedrock flashcard generation failed")
 
 
 async def generate_flashcards(transcript: str) -> list[dict]:

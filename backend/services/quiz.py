@@ -1,4 +1,4 @@
-"""Generate quiz questions with Google Gemini."""
+"""Generate quiz questions with AWS Bedrock."""
 
 from __future__ import annotations
 
@@ -9,14 +9,10 @@ import re
 import time
 from typing import Any
 
-import google.generativeai as genai
+import boto3
+from botocore.exceptions import ClientError
 
 from services.quiz_mock import load_mock_questions_raw
-
-try:
-    from google.api_core import exceptions as google_api_exceptions
-except ImportError:
-    google_api_exceptions = None
 
 
 def _strip_json_fence(raw: str) -> str:
@@ -27,7 +23,7 @@ def _strip_json_fence(raw: str) -> str:
 
 
 def _context_chars() -> int:
-    raw = os.environ.get("GEMINI_QUIZ_CONTEXT_CHARS", "24000").strip()
+    raw = os.environ.get("BEDROCK_CONTEXT_CHARS", "24000").strip()
     try:
         n = int(raw)
         return max(4000, min(n, 120_000))
@@ -35,8 +31,22 @@ def _context_chars() -> int:
         return 24_000
 
 
-def _gemini_model_name() -> str:
-    return os.environ.get("GEMINI_MODEL", "gemini-2.0-flash").strip() or "gemini-2.0-flash"
+def _bedrock_model_id() -> str:
+    return (
+        os.environ.get("BEDROCK_MODEL", "anthropic.claude-3-5-haiku-20241022-v1:0").strip()
+        or "anthropic.claude-3-5-haiku-20241022-v1:0"
+    )
+
+
+def _bedrock_region() -> str:
+    return (
+        os.environ.get("BEDROCK_REGION", "")
+        or os.environ.get("AWS_DEFAULT_REGION", "us-east-1")
+    ).strip() or "us-east-1"
+
+
+def _bedrock_client():
+    return boto3.client("bedrock-runtime", region_name=_bedrock_region())
 
 
 def _use_mock_quiz() -> bool:
@@ -70,11 +80,17 @@ def _normalize_quiz_items(items: list[Any], *, limit: int | None = 5) -> list[di
     return normalized
 
 
-def _is_quota_or_rate_limit(exc: BaseException) -> bool:
-    if google_api_exceptions is not None and isinstance(exc, google_api_exceptions.ResourceExhausted):
-        return True
+def _is_throttle_error(exc: BaseException) -> bool:
+    if isinstance(exc, ClientError):
+        code = exc.response.get("Error", {}).get("Code", "")
+        return code in (
+            "ThrottlingException",
+            "TooManyRequestsException",
+            "ServiceQuotaExceededException",
+            "ModelTimeoutException",
+        )
     msg = str(exc).lower()
-    return "429" in msg or "quota" in msg or "rate limit" in msg or "resource exhausted" in msg
+    return "throttl" in msg or "too many requests" in msg or "rate" in msg
 
 
 def _retry_sleep_seconds(exc: BaseException, attempt: int) -> float:
@@ -88,6 +104,17 @@ def _retry_sleep_seconds(exc: BaseException, attempt: int) -> float:
     return min(8.0 * (attempt + 1), 45.0)
 
 
+def _bedrock_generate(client, model_id: str, prompt: str) -> str:
+    """Call Bedrock Converse API and return the assistant text."""
+    response = client.converse(
+        modelId=model_id,
+        messages=[{"role": "user", "content": [{"text": prompt}]}],
+        inferenceConfig={"maxTokens": 4096, "temperature": 0.3},
+    )
+    blocks = response["output"]["message"]["content"]
+    return blocks[0]["text"] if blocks else ""
+
+
 def generate_quiz_sync(transcript: str) -> list[dict]:
     if _use_mock_quiz():
         raw = load_mock_questions_raw()
@@ -95,22 +122,18 @@ def generate_quiz_sync(transcript: str) -> list[dict]:
             raise RuntimeError("USE_MOCK_QUIZ is set but frontend/mock-quiz.json is missing or empty")
         return _normalize_quiz_items(raw, limit=None)
 
-    key = os.environ.get("GEMINI_API_KEY", "").strip()
-    if not key:
-        raise ValueError("GEMINI_API_KEY is not set")
-
-    genai.configure(api_key=key)
-    model_name = _gemini_model_name()
-    model = genai.GenerativeModel(model_name)
+    model_id = _bedrock_model_id()
+    client = _bedrock_client()
 
     trimmed = transcript[: _context_chars()]
     prompt = f"""You are an educator. Based ONLY on the lecture transcript below, create exactly 5 multiple-choice questions testing concrete facts and concepts from the material.
 
 Return ONLY valid JSON (no markdown fences) with this shape:
-{{"questions":[{{"question":"...","options":{{"A":"...","B":"...","C":"...","D":"..."}},"answer":"A"}}]}}
+{{"questions":[{{"question":"...","options":{{"A":"...","B":"...","C":"...","D":"..."}},"answer":"A","explain":"One sentence explaining why this answer is correct."}}]}}
 
 Rules:
 - answer must be exactly one of "A","B","C","D".
+- explain: a brief, clear explanation (1-2 sentences) of why the correct answer is right. Reference the lecture content.
 - Options must be mutually exclusive and plausible.
 - Do not invent facts not supported by the transcript.
 
@@ -118,42 +141,40 @@ TRANSCRIPT:
 {trimmed}
 """
 
-    max_attempts = int(os.environ.get("GEMINI_QUIZ_MAX_RETRIES", "3"))
+    max_attempts = int(os.environ.get("BEDROCK_QUIZ_MAX_RETRIES", "3"))
     max_attempts = max(1, min(max_attempts, 6))
 
     last_err: BaseException | None = None
     for attempt in range(max_attempts):
         try:
-            response = model.generate_content(prompt)
-            raw_text = (response.text or "").strip()
+            raw_text = _bedrock_generate(client, model_id, prompt).strip()
             if not raw_text:
-                raise ValueError("Gemini returned empty response")
+                raise ValueError("Bedrock returned empty response")
 
             parsed = json.loads(_strip_json_fence(raw_text))
             questions = parsed.get("questions")
             if not isinstance(questions, list):
-                raise ValueError("Gemini JSON missing questions array")
+                raise ValueError("Bedrock JSON missing questions array")
 
             return _normalize_quiz_items(questions, limit=5)
         except (json.JSONDecodeError, ValueError):
             raise
         except BaseException as exc:
             last_err = exc
-            if _is_quota_or_rate_limit(exc) and attempt < max_attempts - 1:
+            if _is_throttle_error(exc) and attempt < max_attempts - 1:
                 time.sleep(_retry_sleep_seconds(exc, attempt))
                 continue
-            if _is_quota_or_rate_limit(exc):
+            if _is_throttle_error(exc):
                 raise RuntimeError(
-                    f"Gemini quota/rate limit ({model_name}). "
-                    "Wait and retry, shorten the lecture, enable billing in Google AI Studio, "
-                    "or try GEMINI_MODEL=gemini-2.5-flash-lite (check model availability). "
-                    "https://ai.google.dev/gemini-api/docs/rate-limits"
+                    f"Bedrock throttled ({model_id}). "
+                    "Wait and retry, shorten the lecture, or check your AWS Bedrock service quotas. "
+                    "https://docs.aws.amazon.com/bedrock/latest/userguide/quotas.html"
                 ) from exc
             raise
 
     if last_err is not None:
         raise last_err
-    raise RuntimeError("Gemini quiz generation failed")
+    raise RuntimeError("Bedrock quiz generation failed")
 
 
 async def generate_quiz(transcript: str) -> list[dict]:

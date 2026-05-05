@@ -1,1 +1,1 @@
-"""Valsea + Gemini integration helpers for Lecture2Quiz SEA."""
+"""Valsea + AWS Bedrock integration helpers for Lecture2Quiz SEA."""

@@ -1,0 +1,29 @@
+---
+description: Never expose internal/infra details in user-facing UI
+globs: frontend/src/**/*.{jsx,tsx}
+alwaysApply: false
+---
+
+# No Internal Details in UI
+
+Never show infrastructure, credentials, env vars, ports, or setup instructions in user-facing UI (footers, banners, tooltips, etc.). This is a production product.
+
+## Forbidden in rendered JSX
+
+- API keys, env var names (`BEDROCK_REGION`, `VALSEA_API_KEY`, etc.)
+- Server ports or hostnames (`port 8001`, `127.0.0.1`)
+- Setup instructions (`.env`, `uvicorn`, `pip install`)
+- Internal service names (`FastAPI`, `Bedrock`, `Valsea`)
+- File paths or config references
+
+```jsx
+// ❌ BAD
+<footer>Set AWS credentials in .env · FastAPI on port 8001</footer>
+<p>Powered by Valsea + AWS Bedrock</p>
+
+// ✅ GOOD
+<footer>Lecture2Quiz SEA</footer>
+<footer>© 2026 Lecture2Quiz SEA</footer>
+```
+
+Keep all infra/setup details in README.md and `.env.example` only.

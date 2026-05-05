@@ -1,4 +1,4 @@
-"""Tests for Gemini quiz generation."""
+"""Tests for Bedrock quiz generation."""
 
 from __future__ import annotations
 
@@ -32,34 +32,33 @@ async def test_generate_quiz_async_delegates_to_sync() -> None:
     assert out[0]["answer"] == "C"
 
 
-def test_generate_quiz_sync_missing_key(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
-    with pytest.raises(ValueError, match="GEMINI_API_KEY"):
-        quiz_module.generate_quiz_sync("text")
-
-
 def test_generate_quiz_sync_normalizes_questions() -> None:
-    fake_response = MagicMock()
-    fake_response.text = json.dumps(
-        {
-            "questions": [
-                {
-                    "question": "One?",
-                    "options": {"A": "a", "B": "b", "C": "c", "D": "d"},
-                    "answer": "b",
-                },
-                {"bad": True},
-            ]
+    bedrock_response = {
+        "output": {
+            "message": {
+                "content": [
+                    {
+                        "text": json.dumps(
+                            {
+                                "questions": [
+                                    {
+                                        "question": "One?",
+                                        "options": {"A": "a", "B": "b", "C": "c", "D": "d"},
+                                        "answer": "b",
+                                    },
+                                    {"bad": True},
+                                ]
+                            }
+                        )
+                    }
+                ]
+            }
         }
-    )
-    mock_model = MagicMock()
-    mock_model.generate_content.return_value = fake_response
+    }
+    mock_client = MagicMock()
+    mock_client.converse.return_value = bedrock_response
 
-    with patch.object(quiz_module.genai, "configure"), patch.object(
-        quiz_module.genai,
-        "GenerativeModel",
-        return_value=mock_model,
-    ):
+    with patch.object(quiz_module, "_bedrock_client", return_value=mock_client):
         out = quiz_module.generate_quiz_sync("lecture body")
 
     assert len(out) == 1
@@ -77,15 +76,12 @@ def test_generate_quiz_sync_use_mock_loads_frontend_pack(monkeypatch: pytest.Mon
 
 
 def test_generate_quiz_sync_invalid_json_raises() -> None:
-    fake_response = MagicMock()
-    fake_response.text = "not json"
-    mock_model = MagicMock()
-    mock_model.generate_content.return_value = fake_response
+    bedrock_response = {
+        "output": {"message": {"content": [{"text": "not json"}]}}
+    }
+    mock_client = MagicMock()
+    mock_client.converse.return_value = bedrock_response
 
-    with patch.object(quiz_module.genai, "configure"), patch.object(
-        quiz_module.genai,
-        "GenerativeModel",
-        return_value=mock_model,
-    ):
+    with patch.object(quiz_module, "_bedrock_client", return_value=mock_client):
         with pytest.raises(json.JSONDecodeError):
             quiz_module.generate_quiz_sync("t")

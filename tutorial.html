@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lecture2Quiz SEA — Tutorial</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/theme/night.css">
+  <style>
+    :root {
+      --r-heading-color: #58a6ff;
+      --r-link-color: #79c0ff;
+    }
+    .reveal h1, .reveal h2, .reveal h3 { text-transform: none; }
+    .reveal .slides section { text-align: left; }
+    .reveal .slides section.center { text-align: center; }
+    .reveal pre { width: 100%; font-size: 0.55em; }
+    .reveal code { color: #c9d1d9; }
+    .reveal ul { font-size: 0.85em; }
+    .reveal .small { font-size: 0.7em; color: #8b949e; }
+    .pipeline-box {
+      display: inline-block;
+      background: #21262d;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 12px 20px;
+      margin: 6px;
+      font-size: 0.7em;
+      color: #c9d1d9;
+    }
+    .pipeline-arrow {
+      display: inline-block;
+      font-size: 1.5em;
+      color: #58a6ff;
+      vertical-align: middle;
+      margin: 0 4px;
+    }
+    .highlight { color: #ffa657; font-weight: bold; }
+    .green { color: #7ee787; }
+    .blue { color: #58a6ff; }
+    .badge {
+      display: inline-block;
+      background: #388bfd26;
+      border: 1px solid #388bfd;
+      border-radius: 20px;
+      padding: 4px 14px;
+      font-size: 0.6em;
+      margin: 4px;
+    }
+    table.clean {
+      font-size: 0.65em;
+      border-collapse: collapse;
+      width: 100%;
+    }
+    table.clean th, table.clean td {
+      border: 1px solid #30363d;
+      padding: 8px 12px;
+      text-align: left;
+    }
+    table.clean th { background: #161b22; color: #58a6ff; }
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 30px;
+      align-items: start;
+    }
+  </style>
+</head>
+<body>
+  <div class="reveal">
+    <div class="slides">
+
+      <!-- Title -->
+      <section class="center">
+        <h1 style="font-size:2.2em;">Lecture2Quiz SEA</h1>
+        <p style="font-size:1.1em; color:#8b949e;">From classroom audio to bilingual study packs</p>
+        <br>
+        <div>
+          <span class="badge">Valsea Speech AI</span>
+          <span class="badge">AWS Bedrock</span>
+          <span class="badge">FastAPI</span>
+          <span class="badge">React + Tailwind</span>
+        </div>
+        <br>
+        <p class="small">Press <kbd>→</kbd> or <kbd>Space</kbd> to navigate &nbsp;|&nbsp; <kbd>Esc</kbd> for overview &nbsp;|&nbsp; <kbd>?</kbd> for help</p>
+      </section>
+
+      <!-- Problem -->
+      <section>
+        <h2>The Problem</h2>
+        <ul>
+          <li>Students in Southeast Asia attend lectures in <span class="highlight">mixed languages</span> (English + local)</li>
+          <li>Taking notes manually is <span class="highlight">slow and incomplete</span></li>
+          <li>No easy way to generate <span class="highlight">quizzes or flashcards</span> from a lecture</li>
+          <li>Existing tools don't understand <span class="highlight">SEA accents & languages</span> (Singlish, Vietnamese, Thai, etc.)</li>
+        </ul>
+      </section>
+
+      <!-- Solution -->
+      <section>
+        <h2>Our Solution</h2>
+        <p style="font-size:1em;">Upload a lecture recording → Get a complete <span class="green">bilingual study pack</span>:</p>
+        <br>
+        <div class="two-col">
+          <div>
+            <h3 style="font-size:0.9em;">Outputs</h3>
+            <ul>
+              <li>Clean transcript</li>
+              <li>Key quotes & overview</li>
+              <li>Action items / takeaways</li>
+              <li>Bilingual glossary</li>
+              <li>10-question quiz</li>
+              <li>Leveled flashcards (easy / medium / hard)</li>
+            </ul>
+          </div>
+          <div>
+            <h3 style="font-size:0.9em;">Key Features</h3>
+            <ul>
+              <li>Supports <span class="blue">70+ languages</span></li>
+              <li>Auto-splits large audio</li>
+              <li>Parallel processing</li>
+              <li>Real-time SSE progress</li>
+              <li>Spaced-repetition study</li>
+              <li>Quiz miss → flashcard</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- Architecture -->
+      <section class="center">
+        <h2>Architecture Overview</h2>
+        <br>
+        <div style="text-align:center;">
+          <div class="pipeline-box" style="border-color:#ffa657;">Browser (React + Tailwind)</div>
+          <br><br>
+          <span class="pipeline-arrow">↕</span>
+          <br><br>
+          <div class="pipeline-box" style="border-color:#7ee787;">FastAPI Backend (Python)</div>
+          <br><br>
+          <span class="pipeline-arrow">↕</span>
+          <span style="display:inline-block; width:120px;"></span>
+          <span class="pipeline-arrow">↕</span>
+          <br><br>
+          <div class="pipeline-box" style="border-color:#58a6ff;">Valsea API<br><span class="small">transcribe, clarify, format, translate</span></div>
+          <span style="display:inline-block; width:40px;"></span>
+          <div class="pipeline-box" style="border-color:#d2a8ff;">AWS Bedrock (Claude)<br><span class="small">quiz generation, flashcards</span></div>
+        </div>
+      </section>
+
+      <!-- Pipeline -->
+      <section>
+        <h2>Processing Pipeline</h2>
+        <br>
+        <div style="text-align:center;">
+          <div class="pipeline-box">1. Upload Audio</div>
+          <span class="pipeline-arrow">→</span>
+          <div class="pipeline-box">2. Auto-Split<br><span class="small">(if > 8 MB)</span></div>
+          <span class="pipeline-arrow">→</span>
+          <div class="pipeline-box">3. Transcribe<br><span class="small">Valsea STT</span></div>
+          <br><br>
+          <span class="pipeline-arrow">↓</span>
+          <br><br>
+          <div class="pipeline-box">4. Clarify<br><span class="small">clean up noisy text</span></div>
+          <span class="pipeline-arrow">→</span>
+          <div class="pipeline-box">5. Format + Quiz<br><span class="small">parallel (Valsea + Bedrock)</span></div>
+          <span class="pipeline-arrow">→</span>
+          <div class="pipeline-box">6. Translate<br><span class="small">→ target language</span></div>
+        </div>
+        <br>
+        <p class="small" style="text-align:center;">Steps 5 runs formatting (key quotes, overview, takeaways), quiz gen, and flashcard gen <strong>all in parallel</strong>.</p>
+      </section>
+
+      <!-- Valsea APIs Used -->
+      <section>
+        <h2>Valsea APIs Used</h2>
+        <table class="clean">
+          <tr><th>Endpoint</th><th>Model</th><th>Purpose</th></tr>
+          <tr><td>POST /v1/audio/transcriptions</td><td>valsea-transcribe</td><td>Speech-to-text with SEA accent support</td></tr>
+          <tr><td>POST /v1/clarifications</td><td>valsea-clarify</td><td>Clean noisy/colloquial transcript</td></tr>
+          <tr><td>POST /v1/formatting</td><td>valsea-format</td><td>Generate key_quotes, meeting_minutes, action_items</td></tr>
+          <tr><td>POST /v1/translations</td><td>valsea-translate</td><td>Translate to student's native language</td></tr>
+        </table>
+        <br>
+        <p class="small">All powered by <a href="https://valsea.ai">valsea.ai</a> — built specifically for Southeast Asian languages.</p>
+      </section>
+
+      <!-- AWS Bedrock -->
+      <section>
+        <h2>AWS Bedrock (Claude)</h2>
+        <p>Used for <span class="highlight">intelligent content generation</span> from the clean transcript:</p>
+        <br>
+        <div class="two-col">
+          <div>
+            <h3 style="font-size:0.85em;">Quiz Generation</h3>
+            <ul>
+              <li>10 multiple-choice questions</li>
+              <li>4 options each (A–D)</li>
+              <li>Correct answer + explanation</li>
+              <li>Covers key concepts from lecture</li>
+            </ul>
+          </div>
+          <div>
+            <h3 style="font-size:0.85em;">Flashcard Generation</h3>
+            <ul>
+              <li>Front (question) / Back (answer)</li>
+              <li>3 difficulty levels: easy, medium, hard</li>
+              <li>Card types: definition, concept, application</li>
+              <li>Feeds into spaced-repetition engine</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- Frontend Pages -->
+      <section>
+        <h2>Frontend Experience</h2>
+        <br>
+        <table class="clean">
+          <tr><th>Page</th><th>Route</th><th>What it does</th></tr>
+          <tr><td><span class="green">Home</span></td><td>/</td><td>Upload audio, select languages, see real-time progress (SSE)</td></tr>
+          <tr><td><span class="green">Library</span></td><td>/library</td><td>Browse past sessions, view bilingual summaries & glossary</td></tr>
+          <tr><td><span class="green">Quiz</span></td><td>/quiz</td><td>Interactive quiz room — immediate feedback, score tracking</td></tr>
+          <tr><td><span class="green">Flashcards</span></td><td>/flashcards</td><td>Flip cards with spaced-repetition, personalized from quiz misses</td></tr>
+        </table>
+      </section>
+
+      <!-- Auto-Split Feature -->
+      <section>
+        <h2>Smart Audio Handling</h2>
+        <p>Large lecture recordings (> 8 MB) are handled automatically:</p>
+        <br>
+        <ol style="font-size:0.85em;">
+          <li>Detect file exceeds threshold → trigger split</li>
+          <li>Split into ~4.5-minute MP3 chunks via <code>ffmpeg</code></li>
+          <li>Transcribe all chunks <span class="highlight">in parallel</span> (3 concurrent by default)</li>
+          <li>Recombine text + semantic tags in order</li>
+          <li>Continue pipeline with full combined transcript</li>
+        </ol>
+        <br>
+        <p class="small">No manual splitting needed — just upload the full recording (up to 1 hour).</p>
+      </section>
+
+      <!-- SSE Streaming -->
+      <section>
+        <h2>Real-Time Progress (SSE)</h2>
+        <p>The UI shows live pipeline status via <span class="blue">Server-Sent Events</span>:</p>
+        <br>
+        <pre><code>POST /process?stream=true
+
+← {"type":"phase","phase":"transcribe","label":"Transcribing audio…"}
+← {"type":"phase","phase":"clarify","label":"Clarifying transcript…"}
+← {"type":"phase","phase":"summary_quiz","label":"Generating study pack…"}
+← {"type":"phase","phase":"translate","label":"Translating → vietnamese…"}
+← {"type":"complete","payload":{ transcript, summary, quiz, flashcards }}
+</code></pre>
+        <br>
+        <p class="small">Students see exactly what's happening — no mystery loading spinner.</p>
+      </section>
+
+      <!-- Study Flow -->
+      <section>
+        <h2>Student Study Flow</h2>
+        <br>
+        <div style="text-align:center;">
+          <div class="pipeline-box">Upload Lecture</div>
+          <span class="pipeline-arrow">→</span>
+          <div class="pipeline-box">Read Summary<br><span class="small">(bilingual)</span></div>
+          <span class="pipeline-arrow">→</span>
+          <div class="pipeline-box">Take Quiz</div>
+          <br><br>
+          <span class="pipeline-arrow" style="margin-left:350px;">↓</span>
+          <br><br>
+          <div class="pipeline-box" style="margin-left:200px;">Review Flashcards<br><span class="small">(includes quiz misses!)</span></div>
+          <span class="pipeline-arrow">→</span>
+          <div class="pipeline-box">Spaced Repetition<br><span class="small">(localStorage)</span></div>
+        </div>
+        <br>
+        <p class="small" style="text-align:center;">Wrong quiz answers automatically become flashcards for extra review.</p>
+      </section>
+
+      <!-- Tech Stack -->
+      <section>
+        <h2>Tech Stack</h2>
+        <br>
+        <div class="two-col">
+          <div>
+            <h3 style="font-size:0.85em;">Backend</h3>
+            <ul>
+              <li><span class="green">Python</span> + FastAPI</li>
+              <li>httpx (async HTTP)</li>
+              <li>boto3 (AWS Bedrock)</li>
+              <li>ffmpeg (audio splitting)</li>
+              <li>pytest + respx (testing)</li>
+            </ul>
+          </div>
+          <div>
+            <h3 style="font-size:0.85em;">Frontend</h3>
+            <ul>
+              <li><span class="green">React</span> + React Router</li>
+              <li>Vite (build tool)</li>
+              <li>Tailwind CSS</li>
+              <li>localStorage (persistence)</li>
+              <li>EventSource (SSE)</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- API Design -->
+      <section>
+        <h2>API Design</h2>
+        <br>
+        <table class="clean">
+          <tr><th>Method</th><th>Path</th><th>Description</th></tr>
+          <tr><td>GET</td><td>/health</td><td>Liveness check</td></tr>
+          <tr>
+            <td>POST</td>
+            <td>/process</td>
+            <td>
+              Main pipeline endpoint<br>
+              <span class="small">
+                multipart: <code>audio</code>, <code>target_language</code>, <code>transcription_language</code>, <code>stream</code><br>
+                Returns: transcript, summary (bilingual), quiz, flashcards
+              </span>
+            </td>
+          </tr>
+        </table>
+        <br>
+        <p class="small">Single endpoint does everything — upload once, get the complete study pack.</p>
+      </section>
+
+      <!-- Demo Configuration -->
+      <section>
+        <h2>Quick Demo (Mock Mode)</h2>
+        <p>Run without API keys using mock data:</p>
+        <br>
+        <pre><code># .env
+USE_MOCK_QUIZ=true
+USE_MOCK_FLASHCARDS=true</code></pre>
+        <br>
+        <p style="font-size:0.85em;">This loads pre-built JSON fixtures so you can demo the UI without:</p>
+        <ul>
+          <li>Valsea API key</li>
+          <li>AWS credentials</li>
+          <li>Network connectivity</li>
+        </ul>
+      </section>
+
+      <!-- Supported Languages -->
+      <section>
+        <h2>Language Support</h2>
+        <p>Valsea supports <span class="highlight">70+ languages</span> with accent-aware models:</p>
+        <br>
+        <div style="font-size:0.7em; line-height:2;">
+          <span class="badge">English</span>
+          <span class="badge">Vietnamese</span>
+          <span class="badge">Thai</span>
+          <span class="badge">Indonesian</span>
+          <span class="badge">Malay</span>
+          <span class="badge">Filipino</span>
+          <span class="badge">Chinese</span>
+          <span class="badge">Japanese</span>
+          <span class="badge">Korean</span>
+          <span class="badge">Singlish</span>
+          <span class="badge">Hindi</span>
+          <span class="badge">Khmer</span>
+          <span class="badge">Lao</span>
+          <span class="badge">Javanese</span>
+          <span class="badge">Tamil</span>
+          <span class="badge">Bengali</span>
+          <span class="badge">+ 55 more…</span>
+        </div>
+        <br>
+        <p class="small">Including regional variants: English-PH, Arabic-UAE, Bengali-BD, etc.</p>
+      </section>
+
+      <!-- How to Run -->
+      <section>
+        <h2>Running the Project</h2>
+        <br>
+        <pre><code># Terminal 1 — Backend
+cd backend
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn main:app --reload --port 8001
+
+# Terminal 2 — Frontend
+cd frontend
+npm install && npm run dev
+</code></pre>
+        <br>
+        <p style="font-size:0.85em;">Open <span class="blue">http://127.0.0.1:5173</span> → Upload audio → Watch the magic happen.</p>
+      </section>
+
+      <!-- What Makes This Unique -->
+      <section>
+        <h2>What Makes This Unique</h2>
+        <br>
+        <ol style="font-size:0.9em;">
+          <li><span class="highlight">SEA-first</span> — built on Valsea, which understands Singlish, accented English, and local languages</li>
+          <li><span class="highlight">End-to-end</span> — one upload produces transcript + summary + quiz + flashcards</li>
+          <li><span class="highlight">Bilingual output</span> — everything in English + student's native language</li>
+          <li><span class="highlight">Adaptive learning</span> — quiz mistakes feed into flashcard deck automatically</li>
+          <li><span class="highlight">No manual work</span> — auto-split, parallel processing, smart retries</li>
+        </ol>
+      </section>
+
+      <!-- Future -->
+      <section>
+        <h2>Roadmap</h2>
+        <br>
+        <ul>
+          <li>Real-time live transcription (WebSocket via Valsea RTT)</li>
+          <li>Persistent session database (SQLite → PostgreSQL)</li>
+          <li>Analytics dashboard (study progress, weak topics)</li>
+          <li>Collaborative study rooms</li>
+          <li>Mobile-friendly PWA</li>
+          <li>Export to PDF / Anki deck</li>
+        </ul>
+      </section>
+
+      <!-- End -->
+      <section class="center">
+        <h1>Thank You</h1>
+        <br>
+        <p style="font-size:1em; color:#8b949e;">Lecture2Quiz SEA</p>
+        <p style="font-size:0.85em;">From classroom audio to bilingual study packs</p>
+        <br>
+        <div>
+          <span class="badge">GitHub: VALSEA_PROJECT</span>
+          <span class="badge">API: valsea.ai</span>
+        </div>
+        <br>
+        <p class="small">
+          Print to PDF: append <code>?print-pdf</code> to the URL, then <kbd>Ctrl+P</kbd> / <kbd>Cmd+P</kbd>
+        </p>
+      </section>
+
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.js"></script>
+  <script>
+    Reveal.initialize({
+      hash: true,
+      slideNumber: true,
+      transition: 'slide',
+      center: false,
+      width: 1200,
+      height: 700,
+      margin: 0.08,
+    });
+  </script>
+</body>
+</html>

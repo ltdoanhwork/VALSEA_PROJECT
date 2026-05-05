@@ -8,7 +8,12 @@ import httpx
 import pytest
 import respx
 
-from services.format_summary import VALSEA_BASE, _extract_formatted_body, format_key_quotes
+from services.format_summary import (
+    VALSEA_BASE,
+    _extract_formatted_body,
+    format_key_quotes,
+    format_transcript,
+)
 
 
 @pytest.mark.parametrize(
@@ -16,6 +21,8 @@ from services.format_summary import VALSEA_BASE, _extract_formatted_body, format
     [
         ({"key_quotes": "  point one  "}, "point one"),
         ({"formatted_text": "minutes"}, "minutes"),
+        ({"meeting_minutes": "overview text"}, "overview text"),
+        ({"action_items": "- do X"}, "- do X"),
         ({"data": {"text": "nested"}}, "nested"),
         ({"output_data": {"summary": "s"}}, "s"),
     ],
@@ -60,3 +67,21 @@ async def test_format_key_quotes_http_error(respx_mock: respx.MockRouter) -> Non
     async with httpx.AsyncClient() as client:
         with pytest.raises(httpx.HTTPStatusError):
             await format_key_quotes(client, transcript="t")
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("output_type", ["meeting_minutes", "action_items", "key_quotes"])
+async def test_format_transcript_sends_output_type(
+    respx_mock: respx.MockRouter, output_type: str
+) -> None:
+    captured: dict = {}
+
+    def route(request: httpx.Request) -> httpx.Response:
+        captured["body"] = json.loads(request.content.decode())
+        return httpx.Response(200, json={"formatted_text": "result"})
+
+    respx_mock.post(f"{VALSEA_BASE}/v1/formatting").mock(side_effect=route)
+    async with httpx.AsyncClient() as client:
+        result = await format_transcript(client, transcript="text", output_type=output_type)
+    assert captured["body"]["output_type"] == output_type
+    assert result == "result"

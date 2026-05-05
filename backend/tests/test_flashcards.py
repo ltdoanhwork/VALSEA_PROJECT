@@ -1,4 +1,4 @@
-"""Tests for Gemini flashcard generation."""
+"""Tests for Bedrock flashcard generation."""
 
 from __future__ import annotations
 
@@ -19,37 +19,34 @@ async def test_generate_flashcards_async_delegates_to_sync() -> None:
     assert out[0]["difficulty"] == "easy"
 
 
-def test_generate_flashcards_sync_missing_key(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
-    monkeypatch.delenv("USE_MOCK_FLASHCARDS", raising=False)
-    with pytest.raises(ValueError, match="GEMINI_API_KEY"):
-        fc_module.generate_flashcards_sync("text")
-
-
-def test_generate_flashcards_sync_normalizes(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("GEMINI_API_KEY", "fake-key-for-test")
-    fake_response = MagicMock()
-    fake_response.text = json.dumps(
-        {
-            "cards": [
-                {
-                    "front": " F ",
-                    "back": " B ",
-                    "difficulty": "EASY",
-                    "card_type": "definition",
-                },
-                {"bad": True},
-            ]
+def test_generate_flashcards_sync_normalizes() -> None:
+    bedrock_response = {
+        "output": {
+            "message": {
+                "content": [
+                    {
+                        "text": json.dumps(
+                            {
+                                "cards": [
+                                    {
+                                        "front": " F ",
+                                        "back": " B ",
+                                        "difficulty": "EASY",
+                                        "card_type": "definition",
+                                    },
+                                    {"bad": True},
+                                ]
+                            }
+                        )
+                    }
+                ]
+            }
         }
-    )
-    mock_model = MagicMock()
-    mock_model.generate_content.return_value = fake_response
+    }
+    mock_client = MagicMock()
+    mock_client.converse.return_value = bedrock_response
 
-    with patch.object(fc_module.genai, "configure"), patch.object(
-        fc_module.genai,
-        "GenerativeModel",
-        return_value=mock_model,
-    ):
+    with patch.object(fc_module, "_bedrock_client", return_value=mock_client):
         out = fc_module.generate_flashcards_sync("lecture")
 
     assert len(out) == 1

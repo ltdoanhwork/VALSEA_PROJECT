@@ -1,0 +1,201 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  min-height: 100vh;
+  background-color: #0f0b1e;
+  background-image: url("/bg.webp");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background: linear-gradient(
+    145deg,
+    rgba(15, 11, 30, 0.82) 0%,
+    rgba(18, 24, 41, 0.78) 40%,
+    rgba(13, 31, 45, 0.80) 100%
+  );
+  pointer-events: none;
+}
+
+#root {
+  position: relative;
+  z-index: 1;
+}
+
+@layer components {
+  .glass {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .glass-strong {
+    background: rgba(255, 255, 255, 0.07);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow:
+      0 8px 32px rgba(0, 0, 0, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, #7c3aed, #6366f1);
+    box-shadow: 0 4px 16px rgba(124, 58, 237, 0.3);
+  }
+  .btn-primary:hover {
+    filter: brightness(1.15);
+    box-shadow: 0 4px 24px rgba(124, 58, 237, 0.4);
+  }
+}
+
+/* Progress bar shimmer */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* Flip card */
+.flip-scene {
+  perspective: 1200px;
+}
+.flip-inner {
+  position: relative;
+  width: 100%;
+  min-height: 240px;
+  transition: transform 0.5s cubic-bezier(0.4, 0.2, 0.2, 1);
+  transform-style: preserve-3d;
+}
+.flip-inner.is-flipped {
+  transform: rotateY(180deg);
+}
+.flip-face {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+.flip-back {
+  transform: rotateY(180deg);
+}
+
+/* Confetti */
+.confetti-piece {
+  position: absolute;
+  top: -12px;
+  width: 10px;
+  height: 14px;
+  border-radius: 2px;
+  opacity: 0.9;
+  animation: confetti-fall linear forwards;
+}
+@keyframes confetti-fall {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(110vh) rotate(720deg);
+    opacity: 0.8;
+  }
+}
+
+/* Quiz shake */
+@keyframes shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-6px);
+  }
+  50% {
+    transform: translateX(6px);
+  }
+  75% {
+    transform: translateX(-4px);
+  }
+}
+.shake-once {
+  animation: shake 0.45s ease-in-out;
+}
+
+/* Select dark bg fix */
+select option {
+  background: #1a1a2e;
+  color: #e2e8f0;
+}
+
+/* ── Light theme ─────────────────────────────────────────── */
+
+[data-theme="light"] body {
+  background-color: #f5f3ff;
+  background-image: none;
+}
+
+[data-theme="light"] body::before {
+  background: linear-gradient(
+    145deg,
+    rgba(250, 245, 255, 0.85) 0%,
+    rgba(238, 242, 255, 0.80) 40%,
+    rgba(240, 249, 255, 0.85) 100%
+  );
+}
+
+[data-theme="light"] .glass {
+  background: rgba(255, 255, 255, 0.55) !important;
+  border-color: rgba(0, 0, 0, 0.06) !important;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+}
+
+[data-theme="light"] .glass-strong {
+  background: rgba(255, 255, 255, 0.72) !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+[data-theme="light"] .btn-primary {
+  box-shadow: 0 4px 16px rgba(124, 58, 237, 0.2);
+}
+
+[data-theme="light"] .text-white {
+  color: #1e293b !important;
+}
+[data-theme="light"] .text-slate-200 {
+  color: #334155 !important;
+}
+[data-theme="light"] .text-slate-300 {
+  color: #475569 !important;
+}
+[data-theme="light"] .text-slate-400 {
+  color: #64748b !important;
+}
+[data-theme="light"] .text-slate-500 {
+  color: #94a3b8 !important;
+}
+[data-theme="light"] .text-slate-600 {
+  color: #94a3b8 !important;
+}
+
+[data-theme="light"] .border-white\/8,
+[data-theme="light"] .border-white\/10 {
+  border-color: rgba(0, 0, 0, 0.06) !important;
+}
+
+[data-theme="light"] .bg-white\/5,
+[data-theme="light"] .bg-white\/10 {
+  background-color: rgba(0, 0, 0, 0.04) !important;
+}
+
+[data-theme="light"] select option {
+  background: #fff;
+  color: #1e293b;
+}

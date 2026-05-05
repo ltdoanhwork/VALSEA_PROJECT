@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: lecture2quiz-sea
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: VALSEA_API_KEY
+        sync: false
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: BEDROCK_REGION
+        value: us-east-1
+    disk:
+      name: lecture-data
+      mountPath: /app/data
+      sizeGB: 1

@@ -84,7 +84,7 @@ def test_process_success_pipeline_mocked() -> None:
     with (
         patch("services.pipeline.transcribe_audio", new_callable=AsyncMock) as tr,
         patch("services.pipeline.clarify_text", new_callable=AsyncMock) as cl,
-        patch("services.pipeline.format_key_quotes", new_callable=AsyncMock) as fmt,
+        patch("services.pipeline.format_transcript", new_callable=AsyncMock) as fmt,
         patch("services.pipeline.translate_text", new_callable=AsyncMock) as tl,
         patch("services.pipeline.generate_quiz", new_callable=AsyncMock) as gq,
         patch("services.pipeline.generate_flashcards", new_callable=AsyncMock) as gf,
@@ -95,7 +95,7 @@ def test_process_success_pipeline_mocked() -> None:
             "semantic_tags": [{"tag": "math", "phrase": "pi", "meaning": "3.14"}],
         }
         cl.return_value = "Intro cleaned."
-        fmt.return_value = "- Pi is important"
+        fmt.side_effect = ["- Pi is important", "Overview of pi", "- Study pi formulas"]
         tl.return_value = "- Pi rất quan trọng"
         gq.return_value = [
             {
@@ -117,6 +117,11 @@ def test_process_success_pipeline_mocked() -> None:
     assert body["transcript"] == "Intro cleaned."
     assert body["summary_en"] == "- Pi is important"
     assert body["summary_local"] == "- Pi rất quan trọng"
+    assert body["summary"]["key_quotes_en"] == "- Pi is important"
+    assert body["summary"]["overview_en"] == "Overview of pi"
+    assert body["summary"]["takeaways_en"] == "- Study pi formulas"
+    assert len(body["summary"]["glossary"]) == 1
+    assert body["summary"]["glossary"][0]["term"] == "pi"
     assert len(body["quiz"]) == 1
     assert body["quiz_error"] is None
     assert len(body["flashcards"]) == 1
@@ -128,7 +133,7 @@ def test_process_quiz_failure_returns_quiz_error() -> None:
     with (
         patch("services.pipeline.transcribe_audio", new_callable=AsyncMock) as tr,
         patch("services.pipeline.clarify_text", new_callable=AsyncMock) as cl,
-        patch("services.pipeline.format_key_quotes", new_callable=AsyncMock) as fmt,
+        patch("services.pipeline.format_transcript", new_callable=AsyncMock) as fmt,
         patch("services.pipeline.translate_text", new_callable=AsyncMock) as tl,
         patch("services.pipeline.generate_quiz", new_callable=AsyncMock) as gq,
         patch("services.pipeline.generate_flashcards", new_callable=AsyncMock) as gf,
@@ -137,7 +142,7 @@ def test_process_quiz_failure_returns_quiz_error() -> None:
         cl.return_value = "Body."
         fmt.return_value = "Summary."
         tl.return_value = "Tóm tắt."
-        gq.side_effect = RuntimeError("Gemini down")
+        gq.side_effect = RuntimeError("Bedrock down")
         gf.return_value = []
 
         files = {"audio": ("a.wav", b"x", "audio/wav")}
@@ -146,7 +151,7 @@ def test_process_quiz_failure_returns_quiz_error() -> None:
     assert response.status_code == 200
     body = response.json()
     assert body["quiz"] == []
-    assert body["quiz_error"] == "Gemini down"
+    assert body["quiz_error"] == "Bedrock down"
     assert body["flashcards"] == []
     assert body["flashcards_error"] is None
 
@@ -155,7 +160,7 @@ def test_process_flashcards_failure_returns_flashcards_error() -> None:
     with (
         patch("services.pipeline.transcribe_audio", new_callable=AsyncMock) as tr,
         patch("services.pipeline.clarify_text", new_callable=AsyncMock) as cl,
-        patch("services.pipeline.format_key_quotes", new_callable=AsyncMock) as fmt,
+        patch("services.pipeline.format_transcript", new_callable=AsyncMock) as fmt,
         patch("services.pipeline.translate_text", new_callable=AsyncMock) as tl,
         patch("services.pipeline.generate_quiz", new_callable=AsyncMock) as gq,
         patch("services.pipeline.generate_flashcards", new_callable=AsyncMock) as gf,
@@ -201,7 +206,7 @@ def test_process_format_http_error() -> None:
     with (
         patch("services.pipeline.transcribe_audio", new_callable=AsyncMock) as tr,
         patch("services.pipeline.clarify_text", new_callable=AsyncMock) as cl,
-        patch("services.pipeline.format_key_quotes", new_callable=AsyncMock) as fmt,
+        patch("services.pipeline.format_transcript", new_callable=AsyncMock) as fmt,
         patch("services.pipeline.generate_quiz", new_callable=AsyncMock) as gq,
         patch("services.pipeline.generate_flashcards", new_callable=AsyncMock) as gf,
     ):
@@ -224,7 +229,7 @@ def test_process_translate_http_error() -> None:
     with (
         patch("services.pipeline.transcribe_audio", new_callable=AsyncMock) as tr,
         patch("services.pipeline.clarify_text", new_callable=AsyncMock) as cl,
-        patch("services.pipeline.format_key_quotes", new_callable=AsyncMock) as fmt,
+        patch("services.pipeline.format_transcript", new_callable=AsyncMock) as fmt,
         patch("services.pipeline.translate_text", new_callable=AsyncMock) as tl,
         patch("services.pipeline.generate_quiz", new_callable=AsyncMock) as gq,
         patch("services.pipeline.generate_flashcards", new_callable=AsyncMock) as gf,
@@ -246,7 +251,7 @@ def test_process_stream_includes_phases_and_complete() -> None:
     with (
         patch("services.pipeline.transcribe_audio", new_callable=AsyncMock) as tr,
         patch("services.pipeline.clarify_text", new_callable=AsyncMock) as cl,
-        patch("services.pipeline.format_key_quotes", new_callable=AsyncMock) as fmt,
+        patch("services.pipeline.format_transcript", new_callable=AsyncMock) as fmt,
         patch("services.pipeline.translate_text", new_callable=AsyncMock) as tl,
         patch("services.pipeline.generate_quiz", new_callable=AsyncMock) as gq,
         patch("services.pipeline.generate_flashcards", new_callable=AsyncMock) as gf,
@@ -282,7 +287,7 @@ def test_process_json_when_stream_disabled() -> None:
     with (
         patch("services.pipeline.transcribe_audio", new_callable=AsyncMock) as tr,
         patch("services.pipeline.clarify_text", new_callable=AsyncMock) as cl,
-        patch("services.pipeline.format_key_quotes", new_callable=AsyncMock) as fmt,
+        patch("services.pipeline.format_transcript", new_callable=AsyncMock) as fmt,
         patch("services.pipeline.translate_text", new_callable=AsyncMock) as tl,
         patch("services.pipeline.generate_quiz", new_callable=AsyncMock) as gq,
         patch("services.pipeline.generate_flashcards", new_callable=AsyncMock) as gf,
