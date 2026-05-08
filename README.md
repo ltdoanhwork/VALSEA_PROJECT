@@ -191,44 +191,37 @@ flowchart TB
 
 ```
 VALSEA_PROJECT/
-├── backend/
-│   ├── main.py                 # FastAPI app — all REST endpoints
-│   ├── db.py                   # SQLite CRUD (aiosqlite)
-│   ├── services/
-│   │   ├── pipeline.py         # Orchestrator: transcribe → clarify → format + quiz → translate
-│   │   ├── audio_splitter.py   # ffmpeg auto-split for large files
+├── backend/                    # FastAPI backend
+│   ├── main.py                 # REST endpoints
+│   ├── db.py                   # SQLite CRUD
+│   ├── services/               # Business logic
+│   │   ├── pipeline.py         # Audio processing pipeline
 │   │   ├── transcribe.py       # Valsea STT wrapper
-│   │   ├── clarify.py          # Valsea clarification wrapper
-│   │   ├── format_summary.py   # Valsea formatting (key_quotes, minutes, action_items)
-│   │   ├── translate.py        # Valsea translation wrapper
 │   │   ├── quiz.py             # AWS Bedrock quiz generation
-│   │   └── flashcards.py       # AWS Bedrock flashcard generation
-│   ├── tests/                  # pytest + respx test suite
-│   └── requirements.txt
-├── frontend/
+│   │   ├── flashcards.py       # AWS Bedrock flashcard generation
+│   │   └── scorer.py           # ML scorer service client
+│   └── tests/
+├── frontend/                   # React 19 + Vite SPA
 │   ├── src/
-│   │   ├── App.jsx             # React Router setup (4 routes)
-│   │   ├── pages/
-│   │   │   ├── Home.jsx        # Upload + SSE progress + results tabs
-│   │   │   ├── Library.jsx     # Saved lectures browser
-│   │   │   ├── Quiz.jsx        # Interactive quiz room
-│   │   │   └── Flashcards.jsx  # Flip cards with spaced repetition
+│   │   ├── pages/              # Home, Library, Quiz, Flashcards
 │   │   ├── components/
-│   │   │   ├── Layout.jsx      # App shell + nav
-│   │   │   ├── FlipCard.jsx    # Animated flip card component
-│   │   │   └── AnalyticsPanel.jsx
-│   │   └── lib/
-│   │       ├── api.js          # API helpers + SSE consumer
-│   │       ├── studyDeck.js    # Session/quiz state management
-│   │       └── textSimilarity.js
-│   ├── vite.config.js
-│   ├── tailwind.config.js
+│   │   └── lib/                # API clients, utilities
 │   └── package.json
-├── Dockerfile                  # Multi-stage: Node build → Python runtime
-├── docker-compose.yml          # Backend + Nginx frontend + volume
-├── render.yaml                 # Render.com one-click deploy
-├── llm.txt                     # Full Valsea API reference
-└── .env.example
+├── mlops/                      # ML training & serving (NEW)
+│   ├── README.md               # MLOps overview
+│   ├── scorer/                 # Semantic similarity scorer
+│   │   ├── docs/               # Implementation guides
+│   │   ├── train.py            # Training pipeline
+│   │   ├── app.py              # FastAPI serving
+│   │   ├── models/             # Trained models
+│   │   └── data/               # Training datasets
+│   └── [future ML projects]/
+├── docs/                       # Project documentation
+│   ├── PROJECT_ARCHITECTURE.md # Overall architecture
+│   └── README.md
+├── docker-compose.yml          # All services orchestration
+├── CLAUDE.md                   # Claude Code guidance
+└── README.md                   # Main documentation
 ```
 
 ### Key Design Decisions

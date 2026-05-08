@@ -1,0 +1,13 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+mlruns/
+models/*.pt
+models/*.pkl
+data/*.csv
+data/*.json
+!data/.gitkeep
+.mlflow/
+.pytest_cache/
+*.log
